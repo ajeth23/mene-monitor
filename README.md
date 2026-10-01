@@ -1,18 +1,22 @@
-# Mene Monitor ⚡
+<div align="center">
+  <img src="app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.webp" width="120" height="120" alt="Mene Monitor Icon" />
+  <h1>Mene Monitor ⚡</h1>
+  <p><strong>Modern, real-time Android system monitoring and hardware diagnostics application built with Kotlin and Jetpack Compose.</strong></p>
 
-[![Android CI](https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml)
-[![CodeQL Security Scan](https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml/badge.svg)](https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml)
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-purple.svg)](https://kotlinlang.org)
+  <p>
+    <a href="https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml"><img src="https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml/badge.svg" alt="Android CI" /></a>
+    <a href="https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml"><img src="https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml/badge.svg" alt="CodeQL Security Scan" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache_2.0-blue.svg" alt="License" /></a>
+    <a href="https://android-arsenal.com/api?level=24"><img src="https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat" alt="API" /></a>
+    <a href="https://kotlinlang.org"><img src="https://img.shields.io/badge/Kotlin-2.0%2B-purple.svg" alt="Kotlin" /></a>
+  </p>
 
-> Modern, real-time Android system monitoring and hardware diagnostics application built with **Kotlin** and **Jetpack Compose**.
-
-<p align="left">
-  <a href="https://play.google.com/store/apps/details?id=app.mene.monitor">
-    <img alt="Get it on Google Play" height="50" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
-  </a>
-</p>
+  <p>
+    <a href="https://play.google.com/store/apps/details?id=app.mene.monitor">
+      <img alt="Get it on Google Play" height="52" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+    </a>
+  </p>
+</div>
 
 ---
 
