@@ -1,5 +1,11 @@
 # Mene Monitor ⚡
 
+[![Android CI](https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml/badge.svg)](https://github.com/ajeth23/mene-monitor/actions/workflows/ci.yml)
+[![CodeQL Security Scan](https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml/badge.svg)](https://github.com/ajeth23/mene-monitor/actions/workflows/codeql.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![API](https://img.shields.io/badge/API-24%2B-brightgreen.svg?style=flat)](https://android-arsenal.com/api?level=24)
+[![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-purple.svg)](https://kotlinlang.org)
+
 > Modern, real-time Android system monitoring and hardware diagnostics application built with **Kotlin** and **Jetpack Compose**.
 
 ---
@@ -59,7 +65,7 @@ app/src/main/java/app/mene/monitor/
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/mene-monitor/mene-monitor.git
+   git clone https://github.com/ajeth23/mene-monitor.git
    cd mene-monitor
    ```
 
