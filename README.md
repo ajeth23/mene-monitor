@@ -8,6 +8,12 @@
 
 > Modern, real-time Android system monitoring and hardware diagnostics application built with **Kotlin** and **Jetpack Compose**.
 
+<p align="left">
+  <a href="https://play.google.com/store/apps/details?id=app.mene.monitor">
+    <img alt="Get it on Google Play" height="50" src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" />
+  </a>
+</p>
+
 ---
 
 ## 📱 About The Project
