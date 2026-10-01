@@ -1,0 +1,6 @@
+{
+  "name": "Mene Monitor",
+  "description": "Hardware and system information monitor displaying real-time CPU, GPU, RAM, storage, battery, sensor, and network diagnostics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,44 @@
+# Android & Gradle Build Outputs
+build/
+/build
+app/build/
+.gradle/
+.kotlin/
+/captures
+.externalNativeBuild
+.cxx
+
+# Local Configuration & SDK Paths
+local.properties
+/local.properties
+sdk.dir
+
+# IDE & Editor Files
+*.iml
+*.ipr
+*.iws
+.idea/
+/.idea/
+.vscode/
+
+# OS System Junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# Secrets, Keystores & Environment Variables
+.env
+.env.local
+*.jks
+*.keystore
+*.p12
+*.pem
+debug.keystore
+google-services.json
+GoogleService-Info.plist
+signing.properties
+
+# Roborazzi Screenshot Testing Output (Ignore actual & diff images)
+*_actual.png
+*_diff.png

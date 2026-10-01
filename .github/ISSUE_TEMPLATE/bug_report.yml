@@ -1,0 +1,54 @@
+name: "🐛 Bug Report"
+description: "Report a bug or reproducible crash in Mene Monitor"
+title: "[BUG]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug! Please fill out the form below to help us investigate.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "e.g., App crashes when opening Sensors tab on Android 14..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior.
+      placeholder: |
+        1. Open Mene Monitor
+        2. Navigate to 'Sensors' tab
+        3. Select 'Fans & Cooling' filter
+        4. See crash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: input
+    id: device_info
+    attributes:
+      label: Device & OS Information
+      description: "Device model and Android OS version (e.g. Pixel 8 - Android 15 / API 35)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: logcat
+    attributes:
+      label: Logcat / Stack trace
+      description: Paste relevant logcat or stack trace output if available.
+      render: shell
