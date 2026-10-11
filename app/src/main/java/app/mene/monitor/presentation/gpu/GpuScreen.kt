@@ -58,7 +58,8 @@ fun GpuScreen(
         HardwareHeader(
             title = "GPU",
             onBackClick = onBackClick,
-            onRefreshClick = onRefreshClick
+            onRefreshClick = onRefreshClick,
+            readingUnavailable = uiState.gpu?.hasUsageReading == false
         )
 
         val gpu = uiState.gpu
@@ -115,10 +116,16 @@ fun GpuScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val hasGpuTemp = gpu.temperature.isNotBlank() && gpu.temperature != "N/A"
+                val displayTemp = if (hasGpuTemp) gpu.temperature else uiState.batteryTemperature ?: "N/A"
+                val tempLabel = if (hasGpuTemp) "GPU Temp" else if (uiState.batteryTemperature != null) "Battery Temp" else "Temperature"
+
                 // Circular Gauge & Stats
                 UsageGaugeWithStats(
                     percentage = gpu.usagePercentage,
-                    temperature = gpu.temperature,
+                    hasReading = gpu.hasUsageReading,
+                    temperature = displayTemp,
+                    tempLabel = tempLabel,
                     clockSpeed = gpu.clockSpeed,
                     accentColor = AccentGpu,
                     clockLabel = "Clock Speed"
@@ -130,7 +137,8 @@ fun GpuScreen(
                 UsageChart(
                     dataPoints = gpu.usageHistory,
                     lineColor = AccentGpu,
-                    title = "Usage History"
+                    title = "Usage History",
+                    currentValue = if (gpu.hasUsageReading) gpu.usagePercentage.toFloat() else null
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -140,6 +148,8 @@ fun GpuScreen(
                     InfoItem("Name", gpu.name),
                     InfoItem("Vendor", gpu.vendor),
                     InfoItem("Clock Speed", gpu.clockSpeed),
+                    InfoItem("GPU Sensor Temp", gpu.temperature),
+                    InfoItem("Battery Temp", uiState.batteryTemperature ?: "Unavailable"),
                     InfoItem("VRAM", gpu.vram),
                     InfoItem("Driver Version", gpu.driverVersion),
                     InfoItem("API Version", gpu.apiVersion),

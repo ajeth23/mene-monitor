@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import app.mene.monitor.domain.model.GpuInfo
+import app.mene.monitor.domain.usecase.ObserveBatteryInfoUseCase
 import app.mene.monitor.domain.usecase.ObserveGpuInfoUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 data class GpuUiState(
     val isLoading: Boolean = true,
     val gpu: GpuInfo? = null,
+    val batteryTemperature: String? = null,
     val error: String? = null
 )
 
@@ -23,7 +25,8 @@ sealed interface GpuAction {
 }
 
 class GpuViewModel(
-    private val observeGpuInfoUseCase: ObserveGpuInfoUseCase
+    private val observeGpuInfoUseCase: ObserveGpuInfoUseCase,
+    private val observeBatteryInfoUseCase: ObserveBatteryInfoUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GpuUiState())
@@ -31,11 +34,15 @@ class GpuViewModel(
 
     init {
         observeGpu()
+        observeBattery()
     }
 
     fun onAction(action: GpuAction) {
         when (action) {
-            GpuAction.Refresh -> observeGpu()
+            GpuAction.Refresh -> {
+                observeGpu()
+                observeBattery()
+            }
         }
     }
 
@@ -49,12 +56,27 @@ class GpuViewModel(
         }
     }
 
+    private fun observeBattery() {
+        observeBatteryInfoUseCase?.let { useCase ->
+            viewModelScope.launch {
+                useCase()
+                    .catch { }
+                    .collect { batteryInfo ->
+                        _uiState.update { it.copy(batteryTemperature = batteryInfo.temperature) }
+                    }
+            }
+        }
+    }
+
     companion object {
-        fun provideFactory(observeGpuInfoUseCase: ObserveGpuInfoUseCase): ViewModelProvider.Factory =
+        fun provideFactory(
+            observeGpuInfoUseCase: ObserveGpuInfoUseCase,
+            observeBatteryInfoUseCase: ObserveBatteryInfoUseCase? = null
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return GpuViewModel(observeGpuInfoUseCase) as T
+                    return GpuViewModel(observeGpuInfoUseCase, observeBatteryInfoUseCase) as T
                 }
             }
     }

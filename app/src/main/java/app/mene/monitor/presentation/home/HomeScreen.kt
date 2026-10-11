@@ -42,19 +42,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
-import app.mene.monitor.R
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.mene.monitor.R
 import app.mene.monitor.core.extensions.Formatters
-import app.mene.monitor.domain.model.CpuInfo
-import app.mene.monitor.domain.model.DeviceInfo
-import app.mene.monitor.domain.model.GpuInfo
-import app.mene.monitor.domain.model.MemoryInfo
-import app.mene.monitor.domain.model.NetworkInfo
-import app.mene.monitor.domain.model.StorageInfo
 import app.mene.monitor.presentation.components.HardwareDeviceCard
 import app.mene.monitor.presentation.components.MetricCardSummary
 import app.mene.monitor.presentation.components.MetricCardWithBar
@@ -118,7 +112,9 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp),
+                    .height(100.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(DarkSurface),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(color = AccentPrimary, modifier = Modifier.size(28.dp))
@@ -187,7 +183,7 @@ fun HomeScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
         // Metric Cards Grid
-        // Row 1: CPU & GPU
+        // Row 1: CPU & GPU (Temperature removed from CPU & GPU cards on home tab)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -195,35 +191,37 @@ fun HomeScreen(
             val cpu = uiState.cpu
             MetricCardWithSparkline(
                 title = "CPU",
-                icon = Icons.Default.Memory,
+                icon = Icons.Default.Speed,
                 accentColor = AccentCpu,
                 iconBgColor = CpuCardBg,
-                primaryValue = if (cpu != null) "${cpu.usagePercentage}%" else "--%",
-                primaryLabel = "Usage",
-                secondaryValue = cpu?.temperature ?: "--°C",
-                secondaryLabel = "Temp",
-                sparklineData = cpu?.usageHistory ?: listOf(10f, 15f, 12f, 18f, 14f),
+                primaryValue = cpu?.let { "${it.usagePercentage}%" } ?: "—",
+                primaryLabel = "usage",
+                secondaryValue = cpu?.currentFrequency ?: "—",
+                secondaryLabel = "clock speed",
+                sparklineData = cpu?.usageHistory ?: emptyList(),
+                readingUnavailable = cpu == null,
                 onClick = onNavigateCpu,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_cpu")
+                    .testTag("home_metric_cpu")
             )
 
             val gpu = uiState.gpu
             MetricCardWithSparkline(
                 title = "GPU",
-                icon = Icons.Default.Speed,
+                icon = Icons.Default.DeveloperBoard,
                 accentColor = AccentGpu,
                 iconBgColor = GpuCardBg,
-                primaryValue = if (gpu != null) "${gpu.usagePercentage}%" else "--%",
-                primaryLabel = "Usage",
-                secondaryValue = gpu?.temperature ?: "--°C",
-                secondaryLabel = "Temp",
-                sparklineData = gpu?.usageHistory ?: listOf(8f, 12f, 10f, 14f, 9f),
+                primaryValue = gpu?.clockSpeed ?: "—",
+                primaryLabel = "clock speed",
+                secondaryValue = gpu?.name ?: "—",
+                secondaryLabel = "engine",
+                sparklineData = gpu?.usageHistory ?: emptyList(),
+                readingUnavailable = gpu == null,
                 onClick = onNavigateGpu,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_gpu")
+                    .testTag("home_metric_gpu")
             )
         }
 
@@ -235,57 +233,59 @@ fun HomeScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val mem = uiState.memory
-            val memUsedGb = if (mem != null) Formatters.formatBytes(mem.usedBytes) else "0 GB"
-            val memTotalGb = if (mem != null) Formatters.formatBytes(mem.totalBytes) else "0 GB"
             MetricCardWithBar(
-                title = "Memory",
-                icon = Icons.Default.DeveloperBoard,
+                title = "RAM",
+                icon = Icons.Default.Memory,
                 accentColor = AccentMemory,
                 iconBgColor = MemoryCardBg,
                 percentage = mem?.usagePercentage ?: 0,
-                detailsText = "$memUsedGb / $memTotalGb",
+                detailsText = mem?.let { "${Formatters.formatBytes(it.usedBytes)} / ${Formatters.formatBytes(it.totalBytes)}" } ?: "—",
                 onClick = onNavigateMemory,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_memory")
+                    .testTag("home_metric_ram")
             )
 
             val storage = uiState.storage
-            val stUsedGb = if (storage != null) Formatters.formatBytes(storage.usedBytes) else "0 GB"
-            val stTotalGb = if (storage != null) Formatters.formatBytes(storage.totalBytes) else "0 GB"
             MetricCardWithBar(
                 title = "Storage",
                 icon = Icons.Default.Storage,
                 accentColor = AccentStorage,
                 iconBgColor = StorageCardBg,
                 percentage = storage?.usagePercentage ?: 0,
-                detailsText = "$stUsedGb / $stTotalGb",
+                detailsText = storage?.let { "${Formatters.formatBytes(it.usedBytes)} / ${Formatters.formatBytes(it.totalBytes)}" } ?: "—",
                 onClick = onNavigateStorage,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_storage")
+                    .testTag("home_metric_storage")
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Row 3: Battery & Network
+        // Row 3: Battery (With battery temperature clearly displayed) & Network
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             val bat = uiState.battery
+            val batSubText = when {
+                bat == null -> "—"
+                bat.temperature != "Unavailable" -> "${bat.temperature} • ${bat.chargingState}"
+                else -> bat.chargingState
+            }
+
             MetricCardSummary(
                 title = "Battery",
                 icon = Icons.Default.BatteryChargingFull,
                 accentColor = AccentBattery,
                 iconBgColor = BatteryCardBg,
-                mainText = if (bat != null) "${bat.percentage}%" else "--%",
-                subText = bat?.estimatedTimeRemaining ?: "Calculating...",
+                mainText = bat?.chargeLabel ?: "—",
+                subText = batSubText,
                 onClick = onNavigateBattery,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_battery")
+                    .testTag("home_metric_battery")
             )
 
             val net = uiState.network
@@ -294,12 +294,12 @@ fun HomeScreen(
                 icon = Icons.Default.Wifi,
                 accentColor = AccentNetwork,
                 iconBgColor = NetworkCardBg,
-                mainText = if (net != null && net.isConnected) "↓ ${net.formattedDownloadSpeed}" else if (net != null) "Offline" else "...",
-                subText = if (net != null && net.isConnected) "↑ ${net.formattedUploadSpeed}" else if (net != null) net.networkType else "--",
+                mainText = net?.networkType ?: "—",
+                subText = net?.let { if (it.isConnected) "${it.formattedDownloadSpeed} ↓" else "Disconnected" } ?: "—",
                 onClick = onNavigateNetwork,
                 modifier = Modifier
                     .weight(1f)
-                    .testTag("metric_card_network")
+                    .testTag("home_metric_network")
             )
         }
 

@@ -73,7 +73,7 @@ fun CoreUsageRow(
         Spacer(modifier = Modifier.width(12.dp))
 
         Text(
-            text = "${core.usagePercentage}%",
+            text = if (core.frequencyMhz > 0) "${core.usagePercentage}%" else "N/A",
             color = TextPrimary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,

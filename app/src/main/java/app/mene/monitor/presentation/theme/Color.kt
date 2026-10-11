@@ -4,7 +4,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
-
 import androidx.compose.ui.graphics.luminance
 
 // Adaptive Background and Surface Properties
@@ -13,7 +12,7 @@ val DarkBackground: Color
     @ReadOnlyComposable
     get() = MaterialTheme.colorScheme.background
 
-// Adaptive Clean Card Surface (98% transparency / 2% tint in both themes)
+// Adaptive Clean Card Surface (Flat, Minimal, No Elevation)
 val DarkSurface: Color
     @Composable
     @ReadOnlyComposable
@@ -24,7 +23,7 @@ val DarkSurface: Color
         return if (isDark) {
             Color.White.copy(alpha = 0.02f)
         } else {
-            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.02f)
+            MaterialTheme.colorScheme.surface
         }
     }
 
@@ -32,16 +31,17 @@ val DarkSurfaceVariant: Color
     @Composable
     @ReadOnlyComposable
     get() {
-        val variant = MaterialTheme.colorScheme.surfaceContainerHigh
-        val bg = MaterialTheme.colorScheme.background
-        val isDark = bg.luminance() < 0.5f
-
-        return if (variant != bg && variant != Color.Unspecified) {
-            variant
-        } else if (isDark) {
-            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        return if (isDark) {
+            val variant = MaterialTheme.colorScheme.surfaceContainerHigh
+            val bg = MaterialTheme.colorScheme.background
+            if (variant != bg && variant != Color.Unspecified) {
+                variant
+            } else {
+                MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f)
+            }
         } else {
-            MaterialTheme.colorScheme.onBackground.copy(alpha = 0.10f)
+            MaterialTheme.colorScheme.surfaceContainer
         }
     }
 
@@ -50,6 +50,7 @@ val DarkSurfaceElevated: Color
     @ReadOnlyComposable
     get() = MaterialTheme.colorScheme.surfaceContainerHighest
 
+// Borderless, Flat Design: No strokes on cards
 val DarkBorder: Color
     @Composable
     @ReadOnlyComposable
@@ -76,8 +77,18 @@ val TextMuted: Color
     @ReadOnlyComposable
     get() = MaterialTheme.colorScheme.outline
 
-// Accent Colors
-val AccentPrimary = Color(0xFF00D2FF)
+// Primary Accent Color (Matches app icon #01F8EF in Dark, Accessible High-Contrast in Light/Dynamic)
+val RawAccentPrimary = Color(0xFF01F8EF)
+
+val AccentPrimary: Color
+    @Composable
+    @ReadOnlyComposable
+    get() {
+        val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+        return if (isDark) RawAccentPrimary else MaterialTheme.colorScheme.primary
+    }
+
+// Feature Accent Colors
 val AccentCpu = Color(0xFF3B82F6)
 val AccentGpu = Color(0xFFA855F7)
 val AccentMemory = Color(0xFF10B981)

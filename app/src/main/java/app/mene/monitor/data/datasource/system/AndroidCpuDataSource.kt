@@ -12,16 +12,15 @@ import kotlin.math.roundToInt
 class AndroidCpuDataSource {
 
     private val usageHistory = ArrayDeque<Float>()
-    private var lastTotalTime = 0L
-    private var lastIdleTime = 0L
+    private val usageTimestamps = ArrayDeque<Long>()
+    private val temperatureHistory = ArrayDeque<Float>()
+    private val temperatureTimestamps = ArrayDeque<Long>()
     private val coreCount = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
 
     fun getCpuInfo(useFahrenheit: Boolean = false): CpuInfo {
         val arch = if (Build.SUPPORTED_ABIS.isNotEmpty()) Build.SUPPORTED_ABIS[0] else System.getProperty("os.arch") ?: "ARM64"
         val cpuName = getCpuModelName()
         val manufacturer = getCpuManufacturer(cpuName)
-
-        val overallUsage = calculateProcStatCpuUsage()
 
         val cores = mutableListOf<CoreInfo>()
         var totalFrequencyMhz = 0
@@ -30,7 +29,7 @@ class AndroidCpuDataSource {
         for (i in 0 until coreCount) {
             val freqKHz = readCoreFrequencyKHz(i)
             val maxFreqKHz = readCoreMaxFrequencyKHz(i)
-            val freqMhz = if (freqKHz > 0) freqKHz / 1000 else if (maxFreqKHz > 0) (maxFreqKHz / 1000 * 0.65).toInt() else 0
+            val freqMhz = if (freqKHz > 0) freqKHz / 1000 else 0
 
             val coreUsage = if (maxFreqKHz > 0 && freqKHz > 0) {
                 ((freqKHz.toFloat() / maxFreqKHz.toFloat()) * 100f).roundToInt().coerceIn(0, 100)
@@ -53,6 +52,8 @@ class AndroidCpuDataSource {
             )
         }
 
+        val overallUsage = calculateProcStatCpuUsage() ?: calculateCoreEstimateCpuUsage(cores)
+
         val avgFreqMhz = if (activeCoresCount > 0) totalFrequencyMhz / activeCoresCount else 0
 
         val baseFreqMhz = readMinFrequencyMhz()
@@ -62,11 +63,20 @@ class AndroidCpuDataSource {
         val tempCelsius = readCpuTemperatureCelsius()
         val tempFormatted = if (tempCelsius != null) Formatters.formatTemperature(tempCelsius, useFahrenheit) else "N/A"
 
-        // Update history strictly when valid overall usage is computed
+        val sampledAt = android.os.SystemClock.elapsedRealtime()
+        synchronized(temperatureHistory) {
+            if (temperatureHistory.size >= 60) {
+                temperatureHistory.removeFirst()
+                temperatureTimestamps.removeFirst()
+            }
+            temperatureHistory.addLast(tempCelsius ?: Float.NaN)
+            temperatureTimestamps.addLast(sampledAt)
+        }
         overallUsage?.let { usageVal ->
             synchronized(usageHistory) {
-                if (usageHistory.size >= 25) usageHistory.removeFirst()
+                if (usageHistory.size >= 60) { usageHistory.removeFirst(); usageTimestamps.removeFirst() }
                 usageHistory.addLast(usageVal.toFloat())
+                usageTimestamps.addLast(sampledAt)
             }
         }
 
@@ -79,6 +89,7 @@ class AndroidCpuDataSource {
             baseFrequency = baseFreqFormatted,
             currentFrequency = curFreqFormatted,
             usagePercentage = overallUsage ?: 0,
+            hasUsageReading = overallUsage != null,
             temperature = tempFormatted,
             cores = cores,
             l1Cache = "N/A",
@@ -87,39 +98,23 @@ class AndroidCpuDataSource {
             governor = readGovernor() ?: "N/A",
             tdp = "N/A",
             processNode = "N/A",
+            temperatureHistory = synchronized(temperatureHistory) {
+                temperatureHistory.map { if (useFahrenheit) it * 9f / 5f + 32f else it }
+            },
+            temperatureTimestamps = synchronized(temperatureHistory) { temperatureTimestamps.toList() },
+            temperatureUnit = if (useFahrenheit) "°F" else "°C",
+            usageTimestamps = synchronized(usageHistory) { usageTimestamps.toList() },
             usageHistory = synchronized(usageHistory) { usageHistory.toList() }
         )
     }
 
-    private fun calculateProcStatCpuUsage(): Int? {
+    private val cpuSampler = CpuUsageSampler()
+
+    private fun readSysfs(path: String): String? {
         return try {
-            val file = File("/proc/stat")
-            if (!file.exists() || !file.canRead()) return null
-
-            val line = file.bufferedReader().use { it.readLine() } ?: return null
-            val tokens = line.split("\\s+".toRegex())
-            if (tokens.size < 5 || tokens[0] != "cpu") return null
-
-            val user = tokens[1].toLongOrNull() ?: 0L
-            val nice = tokens[2].toLongOrNull() ?: 0L
-            val system = tokens[3].toLongOrNull() ?: 0L
-            val idle = tokens[4].toLongOrNull() ?: 0L
-            val iowait = tokens.getOrNull(5)?.toLongOrNull() ?: 0L
-            val irq = tokens.getOrNull(6)?.toLongOrNull() ?: 0L
-            val softirq = tokens.getOrNull(7)?.toLongOrNull() ?: 0L
-
-            val totalTime = user + nice + system + idle + iowait + irq + softirq
-            val idleTime = idle + iowait
-
-            val deltaTotal = totalTime - lastTotalTime
-            val deltaIdle = idleTime - lastIdleTime
-
-            lastTotalTime = totalTime
-            lastIdleTime = idleTime
-
-            if (deltaTotal > 0) {
-                val usageFraction = (deltaTotal - deltaIdle).toDouble() / deltaTotal.toDouble()
-                (usageFraction * 100.0).roundToInt().coerceIn(0, 100)
+            val file = File(path)
+            if (file.exists() && file.canRead()) {
+                file.bufferedReader().use { it.readLine() }
             } else {
                 null
             }
@@ -128,19 +123,26 @@ class AndroidCpuDataSource {
         }
     }
 
+    private fun calculateProcStatCpuUsage(): Int? =
+        cpuSampler.sample(readSysfs("/proc/stat"))
+
+    private fun calculateCoreEstimateCpuUsage(cores: List<CoreInfo>): Int? {
+        val activeCores = cores.filter { it.frequencyMhz > 0 && it.usagePercentage > 0 }
+        if (activeCores.isEmpty()) return null
+        return (activeCores.map { it.usagePercentage }.average()).roundToInt().coerceIn(0, 100)
+    }
+
     private fun readCoreFrequencyKHz(coreIndex: Int): Int {
         val paths = listOf(
             "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/scaling_cur_freq",
-            "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/cpuinfo_cur_freq"
+            "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/cpuinfo_cur_freq",
+            "/sys/devices/system/cpu/cpufreq/policy$coreIndex/scaling_cur_freq",
+            "/sys/devices/system/cpu/cpufreq/policy$coreIndex/cpuinfo_cur_freq"
         )
         for (path in paths) {
-            try {
-                val file = File(path)
-                if (file.exists() && file.canRead()) {
-                    val line = file.readText().trim()
-                    return line.toIntOrNull() ?: 0
-                }
-            } catch (_: Exception) {}
+            val line = readSysfs(path)?.trim().orEmpty()
+            val freq = line.toIntOrNull()
+            if (freq != null && freq > 0) return freq
         }
         return 0
     }
@@ -148,50 +150,51 @@ class AndroidCpuDataSource {
     private fun readCoreMaxFrequencyKHz(coreIndex: Int): Int {
         val paths = listOf(
             "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/cpuinfo_max_freq",
-            "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/scaling_max_freq"
+            "/sys/devices/system/cpu/cpu$coreIndex/cpufreq/scaling_max_freq",
+            "/sys/devices/system/cpu/cpufreq/policy$coreIndex/cpuinfo_max_freq",
+            "/sys/devices/system/cpu/cpufreq/policy$coreIndex/scaling_max_freq"
         )
         for (path in paths) {
-            try {
-                val file = File(path)
-                if (file.exists() && file.canRead()) {
-                    val line = file.readText().trim()
-                    return line.toIntOrNull() ?: 0
-                }
-            } catch (_: Exception) {}
+            val line = readSysfs(path)?.trim().orEmpty()
+            val freq = line.toIntOrNull()
+            if (freq != null && freq > 0) return freq
         }
         return 0
     }
 
     private fun readMinFrequencyMhz(): Int {
-        try {
-            val file = File("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq")
-            if (file.exists() && file.canRead()) {
-                val khz = file.readText().trim().toIntOrNull()
-                if (khz != null && khz > 0) return khz / 1000
-            }
-        } catch (_: Exception) {}
+        val paths = listOf(
+            "/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_min_freq",
+            "/sys/devices/system/cpu/cpu0/cpufreq/scaling_min_freq",
+            "/sys/devices/system/cpu/cpufreq/policy0/cpuinfo_min_freq"
+        )
+        for (path in paths) {
+            val khz = readSysfs(path)?.trim().orEmpty().toIntOrNull()
+            if (khz != null && khz > 0) return khz / 1000
+        }
         return 0
     }
 
     private fun readGovernor(): String? {
-        try {
-            val file = File("/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor")
-            if (file.exists() && file.canRead()) {
-                val text = file.readText().trim()
-                if (text.isNotBlank()) return text.replaceFirstChar { it.uppercase() }
-            }
-        } catch (_: Exception) {}
+        val paths = listOf(
+            "/sys/devices/system/cpu/cpu0/cpufreq/scaling_governor",
+            "/sys/devices/system/cpu/cpufreq/policy0/scaling_governor"
+        )
+        for (path in paths) {
+            val text = readSysfs(path)?.trim().orEmpty()
+            if (text.isNotBlank()) return text.replaceFirstChar { it.uppercase() }
+        }
         return null
     }
 
     private fun readCpuTemperatureCelsius(): Float? {
-        for (i in 0..15) {
+        for (i in 0..35) {
             val typeFile = File("/sys/class/thermal/thermal_zone$i/type")
             val tempFile = File("/sys/class/thermal/thermal_zone$i/temp")
             if (tempFile.exists() && tempFile.canRead()) {
                 try {
                     val type = if (typeFile.exists() && typeFile.canRead()) typeFile.readText().trim().lowercase() else ""
-                    if (type.contains("cpu") || type.contains("soc") || type.contains("tsens") || type.isEmpty()) {
+                    if (type.contains("cpu") || type.contains("soc") || type.contains("tsens") || type.contains("cluster")) {
                         val rawTemp = tempFile.readText().trim().toFloatOrNull()
                         if (rawTemp != null && rawTemp > 0) {
                             val temp = if (rawTemp > 1000) rawTemp / 1000f else rawTemp

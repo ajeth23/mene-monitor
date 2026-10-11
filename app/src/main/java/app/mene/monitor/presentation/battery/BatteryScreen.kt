@@ -96,20 +96,20 @@ fun BatteryScreen(
 
                     Column {
                         Text(
-                            text = "${bat.percentage}% Charged",
+                            text = "${bat.chargeLabel} charge",
                             color = TextPrimary,
-                            fontSize = 17.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "${bat.chargingState} • ${bat.powerSource}",
                             color = TextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 16.sp
                         )
                         Text(
                             text = bat.estimatedTimeRemaining,
                             color = TextMuted,
-                            fontSize = 11.sp
+                            fontSize = 14.sp
                         )
                     }
                 }
@@ -117,7 +117,7 @@ fun BatteryScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Circular Gauge & Stats
-                UsageGaugeWithStats(
+                if (bat.percentage >= 0) UsageGaugeWithStats(
                     percentage = bat.percentage,
                     temperature = bat.temperature,
                     clockSpeed = bat.voltageFormatted,
@@ -131,21 +131,37 @@ fun BatteryScreen(
                 UsageChart(
                     dataPoints = bat.usageHistory,
                     lineColor = AccentBattery,
-                    title = "Charge Level History"
+                    title = "Charge Level History",
+                    timestamps = bat.usageTimestamps,
+                    currentValue = bat.percentage.takeIf { it in 0..100 }?.toFloat()
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                DetailsCard(
+                    title = "Battery Health",
+                    items = listOf(
+                        InfoItem("Capacity health", bat.healthLabel),
+                        InfoItem("Android condition", bat.health)
+                    )
+                )
+                Text(
+                    text = if (bat.healthPercentage != null)
+                        "Estimated from device-reported full charge and design capacities. This differs from the current charge level."
+                        else "This device does not expose the capacity readings needed for a health percentage. Android condition is a separate status.",
+                    color = TextSecondary, fontSize = 16.sp, modifier = Modifier.padding(vertical = 12.dp)
+                )
                 // Battery Details Card
                 val details = listOf(
                     InfoItem("Status", bat.chargingState),
                     InfoItem("Power Source", bat.powerSource),
-                    InfoItem("Health", bat.health, AccentMemory),
+                    InfoItem("Android condition", bat.health),
                     InfoItem("Temperature", bat.temperature),
-                    InfoItem("Voltage", "${bat.voltageMv} mV (${bat.voltageFormatted})"),
-                    InfoItem("Current Flow", "${bat.currentMa} mA"),
-                    InfoItem("Design Capacity", "${bat.designCapacityMah} mAh (${bat.designCapacityWh})"),
-                    InfoItem("Remaining Capacity", "${bat.capacityMah} mAh (${bat.fullChargeCapacityWh})"),
+                    InfoItem("Voltage", bat.voltageFormatted),
+                    InfoItem("Current flow (signed)", bat.currentMa?.let { "$it mA" } ?: "Unavailable"),
+                    InfoItem("Design capacity", bat.designCapacityMah?.let { "$it mAh" } ?: "Unavailable"),
+                    InfoItem("Full charge capacity", bat.fullChargeCapacityMah?.let { "$it mAh" } ?: "Unavailable"),
+                    InfoItem("Remaining charge", bat.capacityMah?.let { "$it mAh" } ?: "Unavailable"),
                     InfoItem("Technology", bat.technology),
                     InfoItem("Estimated Time", bat.estimatedTimeRemaining)
                 )

@@ -1,7 +1,6 @@
 package app.mene.monitor.presentation.more
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,7 +44,6 @@ import app.mene.monitor.presentation.theme.AccentPrimary
 import app.mene.monitor.presentation.theme.AccentSensors
 import app.mene.monitor.presentation.theme.AccentStorage
 import app.mene.monitor.presentation.theme.DarkBackground
-import app.mene.monitor.presentation.theme.DarkBorderSubtle
 import app.mene.monitor.presentation.theme.DarkSurface
 import app.mene.monitor.presentation.theme.TextMuted
 import app.mene.monitor.presentation.theme.TextPrimary
@@ -89,7 +87,7 @@ fun MoreScreen(
 
             MoreNavigationItem(
                 title = "Battery & Power",
-                subtitle = "Charge level, health, voltage, current & rate",
+                subtitle = "Health metrics, current flow, voltage & thermals",
                 icon = Icons.Default.BatteryChargingFull,
                 iconColor = AccentBattery,
                 testTag = "more_item_battery",
@@ -97,8 +95,8 @@ fun MoreScreen(
             )
 
             MoreNavigationItem(
-                title = "Sensors & Cooling",
-                subtitle = "Thermal zones, fans, accelerometer & environment",
+                title = "Sensors Telemetry",
+                subtitle = "Live accelerometer, gyroscope & magnetometer readings",
                 icon = Icons.Default.Sensors,
                 iconColor = AccentSensors,
                 testTag = "more_item_sensors",
@@ -106,8 +104,8 @@ fun MoreScreen(
             )
 
             MoreNavigationItem(
-                title = "Network & Connectivity",
-                subtitle = "Wi-Fi link, carrier throughput & local IP",
+                title = "Network & Interfaces",
+                subtitle = "Wi-Fi, cellular signal, link speed & IP addresses",
                 icon = Icons.Default.Wifi,
                 iconColor = AccentNetwork,
                 testTag = "more_item_network",
@@ -115,27 +113,17 @@ fun MoreScreen(
             )
 
             MoreNavigationItem(
-                title = "System Specifications",
-                subtitle = "Android version, kernel, display, board & ABIs",
+                title = "System & Specs",
+                subtitle = "OS, Linux kernel, security patch & hardware platform",
                 icon = Icons.Default.PhoneAndroid,
                 iconColor = AccentPrimary,
                 testTag = "more_item_system",
                 onClick = onNavigateSystemInfo
             )
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = "Preferences",
-                color = TextMuted,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(start = 4.dp, bottom = 2.dp)
-            )
-
             MoreNavigationItem(
                 title = "Settings",
-                subtitle = "Refresh rate, temperature units & display",
+                subtitle = "Telemetry refresh rate & display units",
                 icon = Icons.Default.Settings,
                 iconColor = TextSecondary,
                 testTag = "more_item_settings",

@@ -39,9 +39,7 @@ import app.mene.monitor.presentation.components.InfoItem
 import app.mene.monitor.presentation.components.UsageChart
 import app.mene.monitor.presentation.theme.AccentMemory
 import app.mene.monitor.presentation.theme.DarkBackground
-import app.mene.monitor.presentation.theme.DarkBorderSubtle
 import app.mene.monitor.presentation.theme.DarkSurface
-import app.mene.monitor.presentation.theme.MemoryCardBg
 import app.mene.monitor.presentation.theme.TextPrimary
 import app.mene.monitor.presentation.theme.TextSecondary
 
@@ -75,14 +73,14 @@ fun MemoryScreen(
         }
 
         if (mem != null) {
-            val usedStr = Formatters.formatBytes(mem.usedBytes)
-            val totalStr = Formatters.formatBytes(mem.totalBytes)
-            val availStr = Formatters.formatBytes(mem.availableBytes)
+            val usedStr = if (mem.hasReading) Formatters.formatBytes(mem.usedBytes) else "Unavailable"
+            val totalStr = if (mem.hasReading) Formatters.formatBytes(mem.totalBytes) else "Unavailable"
+            val availStr = if (mem.hasReading) Formatters.formatBytes(mem.availableBytes) else "Unavailable"
             val swapTotalStr = Formatters.formatBytes(mem.swapTotalBytes)
             val swapUsedStr = Formatters.formatBytes(mem.swapUsedBytes)
 
             val progress by animateFloatAsState(
-                targetValue = (mem.usagePercentage / 100f).coerceIn(0f, 1f),
+                targetValue = ((mem.preciseUsagePercentage ?: 0f) / 100f).coerceIn(0f, 1f),
                 animationSpec = tween(500),
                 label = "mem_progress"
             )
@@ -113,22 +111,29 @@ fun MemoryScreen(
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        Column {
+                        Column(Modifier.weight(1f)) {
                             Text(
-                                text = "${mem.usagePercentage}%",
+                                text = if (mem.hasReading) availStr else "Unavailable",
                                 color = TextPrimary,
-                                fontSize = 28.sp,
+                                fontSize = 32.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "$usedStr / $totalStr",
+                                text = if (mem.hasReading) "Available RAM" else "Waiting for a memory reading",
                                 color = TextSecondary,
-                                fontSize = 13.sp
+                                fontSize = 16.sp
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        if (mem.hasReading) "$usedStr used of $totalStr" else "Memory data unavailable",
+                        color = TextSecondary,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Wide progress bar
                     Box(
@@ -150,11 +155,42 @@ fun MemoryScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(DarkSurface)
+                        .padding(20.dp)
+                ) {
+                    Text(
+                        text = when {
+                            !mem.hasReading -> "Memory status unavailable"
+                            mem.isLowMemory -> "Low memory"
+                            else -> "Memory status: Normal"
+                        },
+                        color = if (mem.hasReading && mem.isLowMemory) app.mene.monitor.presentation.theme.AccentWarning else TextPrimary,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        "Android reclaims memory when needed. High RAM usage alone does not mean a problem.",
+                        color = TextSecondary,
+                        fontSize = 16.sp,
+                        lineHeight = 24.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
                 // Usage History Chart (Green)
                 UsageChart(
                     dataPoints = mem.usageHistory,
                     lineColor = AccentMemory,
-                    title = "Usage History"
+                    title = "RAM Usage",
+                    timestamps = mem.usageTimestamps,
+                    currentValue = mem.preciseUsagePercentage,
+                    decimalPlaces = 1
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -168,12 +204,13 @@ fun MemoryScreen(
                     InfoItem("Type", mem.memoryType),
                     InfoItem("Swap / ZRAM Total", swapTotalStr),
                     InfoItem("Swap / ZRAM Used", swapUsedStr),
-                    InfoItem("Low Memory Status", if (mem.isLowMemory) "Warning: Low" else "Normal")
+                    InfoItem("Low Memory Status", if (!mem.hasReading) "Unavailable" else if (mem.isLowMemory) "Low memory" else "Normal")
                 )
                 DetailsCard(
                     title = "Memory Details",
                     items = details,
-                    modifier = Modifier.testTag("memory_details_card")
+                    modifier = Modifier.testTag("memory_details_card"),
+                    expandable = true
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))

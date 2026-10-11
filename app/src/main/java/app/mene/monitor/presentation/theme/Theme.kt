@@ -32,8 +32,8 @@ val RawDarkBackground = Color(0xFF08141F)
 val RawDarkSurface = Color(0xFF141C2B)
 val RawDarkSurfaceVariant = Color(0xFF1C263A)
 val RawDarkSurfaceElevated = Color(0xFF1C263A)
-val RawDarkBorder = Color(0xFF26334D)
-val RawDarkBorderSubtle = Color(0xFF182236)
+val RawDarkBorder = Color.Transparent
+val RawDarkBorderSubtle = Color.Transparent
 
 val RawTextPrimaryDark = Color(0xFFF8FAFC)
 val RawTextSecondaryDark = Color(0xFF94A3B8)
@@ -45,10 +45,10 @@ val RawDarkSurfaceContainerHigh = Color(0xFF192336)
 val RawDarkSurfaceContainerHighest = Color(0xFF1E2A40)
 
 private val DarkColorScheme = darkColorScheme(
-    primary = AccentPrimary,
+    primary = RawAccentPrimary,
     onPrimary = RawDarkBackground,
     primaryContainer = RawDarkSurfaceVariant,
-    onPrimaryContainer = AccentPrimary,
+    onPrimaryContainer = RawAccentPrimary,
     secondary = AccentCpu,
     onSecondary = RawDarkBackground,
     tertiary = AccentGpu,
@@ -63,28 +63,28 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = RawTextPrimaryDark,
     surfaceVariant = RawDarkSurfaceVariant,
     onSurfaceVariant = RawTextSecondaryDark,
-    outline = RawDarkBorder,
+    outline = RawTextMutedDark,
     outlineVariant = RawDarkBorderSubtle
 )
 
-// Static Light Color Scheme (Clean White Background + Soft Minimal Slate Card Surface)
-val RawLightBackground = Color(0xFFFFFFFF)
+// Static Light Color Scheme (Soft Slate Canvas + Crisp White Cards + Slate Container, Borderless)
+val RawLightBackground = Color(0xFFF8FAFC)
 val RawLightSurface = Color(0xFFFFFFFF)
-val RawLightSurfaceContainer = Color(0xFFF4F6F9)
-val RawLightSurfaceContainerLow = Color(0xFFF8F9FA)
-val RawLightSurfaceContainerHigh = Color(0xFFEFF2F6)
-val RawLightSurfaceContainerHighest = Color(0xFFE9EDF3)
-val RawLightSurfaceVariant = Color(0xFFE9EEF5)
-val RawLightSurfaceElevated = Color(0xFFF4F6F9)
+val RawLightSurfaceContainer = Color(0xFFF1F5F9)
+val RawLightSurfaceContainerLow = Color(0xFFF8FAFC)
+val RawLightSurfaceContainerHigh = Color(0xFFE2E8F0)
+val RawLightSurfaceContainerHighest = Color(0xFFCBD5E1)
+val RawLightSurfaceVariant = Color(0xFFE2E8F0)
+val RawLightSurfaceElevated = Color(0xFFFFFFFF)
 val RawLightBorder = Color.Transparent
 val RawLightBorderSubtle = Color.Transparent
 
 val RawTextPrimaryLight = Color(0xFF0F172A)
 val RawTextSecondaryLight = Color(0xFF475569)
-val RawTextMutedLight = Color(0xFF94A3B8)
+val RawTextMutedLight = Color(0xFF64748B)
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF006688),
+    primary = Color(0xFF0077A3),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFE0F2FE),
     onPrimaryContainer = Color(0xFF001E2B),
@@ -102,8 +102,8 @@ private val LightColorScheme = lightColorScheme(
     onSurface = RawTextPrimaryLight,
     surfaceVariant = RawLightSurfaceVariant,
     onSurfaceVariant = RawTextSecondaryLight,
-    outline = RawLightBorder,
-    outlineVariant = RawLightBorderSubtle
+    outline = RawTextMutedLight,
+    outlineVariant = RawLightBorder
 )
 
 val MeneShapes = Shapes(
@@ -116,7 +116,7 @@ val MeneShapes = Shapes(
 
 @Composable
 fun MeneMonitorTheme(
-    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    themeMode: AppThemeMode = AppThemeMode.LIGHT,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -153,8 +153,9 @@ fun MeneMonitorTheme(
                 insetsController.isAppearanceLightStatusBars = !isDark
                 insetsController.isAppearanceLightNavigationBars = !isDark
 
-                // Set system navigation bar to the exact same color as bottom navigation
-                window.navigationBarColor = colorScheme.background.toArgb()
+                // Match system navigation bar to bottom navigation container surface
+                val navBarColor = if (isDark) colorScheme.background else colorScheme.surfaceContainer
+                window.navigationBarColor = navBarColor.toArgb()
             }
         }
     }

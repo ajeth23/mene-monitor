@@ -24,5 +24,10 @@ data class CpuInfo(
     val governor: String,
     val tdp: String,
     val processNode: String,
+    val temperatureHistory: List<Float> = emptyList(),
+    val temperatureTimestamps: List<Long> = emptyList(),
+    val usageTimestamps: List<Long> = emptyList(),
+    val temperatureUnit: String = "°C",
+    val hasUsageReading: Boolean = true,
     val usageHistory: List<Float>
 )

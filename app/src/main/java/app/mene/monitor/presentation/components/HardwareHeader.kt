@@ -29,7 +29,8 @@ fun HardwareHeader(
     modifier: Modifier = Modifier,
     onBackClick: (() -> Unit)? = null,
     onRefreshClick: (() -> Unit)? = null,
-    onMoreClick: (() -> Unit)? = null
+    onMoreClick: (() -> Unit)? = null,
+    readingUnavailable: Boolean = false
 ) {
     Row(
         modifier = modifier

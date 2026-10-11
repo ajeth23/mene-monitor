@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import app.mene.monitor.domain.model.CpuInfo
+import app.mene.monitor.domain.usecase.ObserveBatteryInfoUseCase
 import app.mene.monitor.domain.usecase.ObserveCpuInfoUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
 data class CpuUiState(
     val isLoading: Boolean = true,
     val cpu: CpuInfo? = null,
+    val batteryTemperature: String? = null,
     val error: String? = null
 )
 
@@ -23,7 +25,8 @@ sealed interface CpuAction {
 }
 
 class CpuViewModel(
-    private val observeCpuInfoUseCase: ObserveCpuInfoUseCase
+    private val observeCpuInfoUseCase: ObserveCpuInfoUseCase,
+    private val observeBatteryInfoUseCase: ObserveBatteryInfoUseCase? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CpuUiState())
@@ -31,11 +34,15 @@ class CpuViewModel(
 
     init {
         observeCpu()
+        observeBattery()
     }
 
     fun onAction(action: CpuAction) {
         when (action) {
-            CpuAction.Refresh -> observeCpu()
+            CpuAction.Refresh -> {
+                observeCpu()
+                observeBattery()
+            }
         }
     }
 
@@ -49,12 +56,27 @@ class CpuViewModel(
         }
     }
 
+    private fun observeBattery() {
+        observeBatteryInfoUseCase?.let { useCase ->
+            viewModelScope.launch {
+                useCase()
+                    .catch { }
+                    .collect { batteryInfo ->
+                        _uiState.update { it.copy(batteryTemperature = batteryInfo.temperature) }
+                    }
+            }
+        }
+    }
+
     companion object {
-        fun provideFactory(observeCpuInfoUseCase: ObserveCpuInfoUseCase): ViewModelProvider.Factory =
+        fun provideFactory(
+            observeCpuInfoUseCase: ObserveCpuInfoUseCase,
+            observeBatteryInfoUseCase: ObserveBatteryInfoUseCase? = null
+        ): ViewModelProvider.Factory =
             object : ViewModelProvider.Factory {
                 @Suppress("UNCHECKED_CAST")
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return CpuViewModel(observeCpuInfoUseCase) as T
+                    return CpuViewModel(observeCpuInfoUseCase, observeBatteryInfoUseCase) as T
                 }
             }
     }

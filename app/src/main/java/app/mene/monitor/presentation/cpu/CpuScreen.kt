@@ -60,7 +60,8 @@ fun CpuScreen(
         HardwareHeader(
             title = "CPU",
             onBackClick = onBackClick,
-            onRefreshClick = onRefreshClick
+            onRefreshClick = onRefreshClick,
+            readingUnavailable = uiState.cpu?.hasUsageReading == false
         )
 
         val cpu = uiState.cpu
@@ -99,32 +100,61 @@ fun CpuScreen(
                         Text(
                             text = cpu.name,
                             color = TextPrimary,
-                            fontSize = 17.sp,
+                            fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = "${cpu.coreCount} Cores / ${cpu.threadCount} Threads",
                             color = TextSecondary,
-                            fontSize = 12.sp
+                            fontSize = 16.sp
                         )
                         Text(
                             text = "Base Clock: ${cpu.baseFrequency}",
                             color = TextMuted,
-                            fontSize = 11.sp
+                            fontSize = 14.sp
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val hasCpuTemp = cpu.temperature.isNotBlank() && cpu.temperature != "N/A"
+                val displayTemp = if (hasCpuTemp) cpu.temperature else uiState.batteryTemperature ?: "N/A"
+                val tempLabel = if (hasCpuTemp) "CPU Temp" else if (uiState.batteryTemperature != null) "Battery Temp" else "Temperature"
+
                 // Circular Gauge & Stats
                 UsageGaugeWithStats(
                     percentage = cpu.usagePercentage,
-                    temperature = cpu.temperature,
+                    hasReading = cpu.hasUsageReading,
+                    temperature = displayTemp,
+                    tempLabel = tempLabel,
                     clockSpeed = cpu.currentFrequency,
                     accentColor = AccentCpu
                 )
 
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Usage History Chart
+                UsageChart(
+                    dataPoints = cpu.usageHistory,
+                    lineColor = AccentCpu,
+                    title = "CPU Usage",
+                    timestamps = cpu.usageTimestamps,
+                    currentValue = if (!cpu.hasUsageReading) null else cpu.usagePercentage.toFloat()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                UsageChart(
+                    dataPoints = cpu.temperatureHistory,
+                    timestamps = cpu.temperatureTimestamps,
+                    lineColor = AccentCpu,
+                    title = "CPU / SoC Temperature",
+                    minValue = if (cpu.temperatureUnit == "°F") 32f else 0f,
+                    maxValue = if (cpu.temperatureUnit == "°F") 212f else 100f,
+                    unit = cpu.temperatureUnit,
+                    unavailableMessage = "Temperature unavailable on this device"
+                )
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // Core Usage List
@@ -136,9 +166,9 @@ fun CpuScreen(
                         .padding(16.dp)
                 ) {
                     Text(
-                        text = "Core Usage",
+                        text = "Core Usage & Clock Speeds",
                         color = TextPrimary,
-                        fontSize = 15.sp,
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(bottom = 10.dp)
                     )
@@ -150,31 +180,27 @@ fun CpuScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Usage History Chart
-                UsageChart(
-                    dataPoints = cpu.usageHistory,
-                    lineColor = AccentCpu,
-                    title = "Usage History"
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // CPU Details Card
                 val details = listOf(
+                    InfoItem("CPU Usage", "${cpu.usagePercentage}%"),
+                    InfoItem("CPU Sensor Temp", cpu.temperature),
+                    InfoItem("Battery Temp", uiState.batteryTemperature ?: "Unavailable"),
                     InfoItem("Architecture", cpu.architecture),
                     InfoItem("Base Clock", cpu.baseFrequency),
                     InfoItem("Current Average Clock", cpu.currentFrequency),
+                    InfoItem("Active Cores", "${cpu.cores.count { it.frequencyMhz > 0 }} of ${cpu.coreCount}"),
+                    InfoItem("Governor", cpu.governor),
                     InfoItem("L1 Cache", cpu.l1Cache),
                     InfoItem("L2 Cache", cpu.l2Cache),
                     InfoItem("L3 Cache", cpu.l3Cache),
-                    InfoItem("Governor", cpu.governor),
                     InfoItem("TDP", cpu.tdp),
                     InfoItem("Process Node", cpu.processNode)
                 )
                 DetailsCard(
                     title = "CPU Details",
                     items = details,
-                    modifier = Modifier.testTag("cpu_details_card")
+                    modifier = Modifier.testTag("cpu_details_card"),
+                    expandable = true
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))

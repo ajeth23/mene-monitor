@@ -13,6 +13,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import app.mene.monitor.domain.model.DiagnosticCategory
 import app.mene.monitor.domain.model.DiagnosticItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.sin
@@ -61,6 +62,8 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
             cameraManager.setTorchMode(cameraId, false)
             isFlashlightOn = false
             true
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             false
         } finally {
@@ -77,10 +80,12 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager
                 val effect = VibrationEffect.createPredefined(VibrationEffect.EFFECT_DOUBLE_CLICK)
-                vibratorManager?.vibrate(CombinedVibration.createParallel(effect))
+                if (vibratorManager?.defaultVibrator?.hasVibrator() != true) return false
+                vibratorManager.vibrate(CombinedVibration.createParallel(effect))
             } else {
                 @Suppress("DEPRECATION")
                 val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                if (vibrator?.hasVibrator() != true) return false
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vibrator?.vibrate(VibrationEffect.createOneShot(200, VibrationEffect.DEFAULT_AMPLITUDE))
                 } else {
@@ -95,6 +100,7 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
     }
 
     suspend fun playAudioTestTone(): Boolean = withContext(Dispatchers.IO) {
+        var audioTrack: AudioTrack? = null
         try {
             val sampleRate = 44100
             val durationMs = 500
@@ -121,7 +127,7 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
                 AudioFormat.ENCODING_PCM_16BIT
             )
 
-            val audioTrack = AudioTrack.Builder()
+            val track = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -138,14 +144,33 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
                 .setBufferSizeInBytes(bufferSize)
                 .build()
 
-            audioTrack.play()
-            audioTrack.write(generatedSnd, 0, generatedSnd.size)
-            audioTrack.stop()
-            audioTrack.release()
-            true
+            audioTrack = track
+            track.play()
+            val written = track.write(generatedSnd, 0, generatedSnd.size)
+            kotlinx.coroutines.delay(durationMs.toLong())
+            written == generatedSnd.size
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             false
+        } finally {
+            try { audioTrack?.stop() } catch (_: Exception) {}
+            audioTrack?.release()
         }
+    }
+
+    fun outputAvailability(id: String): app.mene.monitor.domain.model.TestStatus? {
+        val supported = when (id) {
+            "vibration" -> if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator?.hasVibrator() == true
+            } else {
+                (context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator)?.hasVibrator() == true
+            }
+            "flashlight" -> context.packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_CAMERA_FLASH)
+            else -> true
+        }
+        if (!supported) return app.mene.monitor.domain.model.TestStatus.UNSUPPORTED
+        return null
     }
 
     fun getInitialDiagnosticItems(): List<DiagnosticItem> {
@@ -187,15 +212,15 @@ class AndroidDiagnosticsDataSource(private val context: Context) {
             ),
             DiagnosticItem(
                 id = "sensors",
-                title = "Sensors Scan",
-                description = "Verifies active hardware sensors (Accelerometer, Gyroscope, Light, Proximity).",
+                title = "Sensor Responsiveness",
+                description = "Tilt, rotate, and cover sensors while watching live readings.",
                 category = DiagnosticCategory.SENSORS,
-                isInteractive = false
+                isInteractive = true
             ),
             DiagnosticItem(
                 id = "battery",
                 title = "Battery & Power Health",
-                description = "Checks battery charging system, voltage levels, and thermal conditions.",
+                description = "Reads Android battery health, voltage, and temperature; does not measure capacity.",
                 category = DiagnosticCategory.BATTERY,
                 isInteractive = false
             )

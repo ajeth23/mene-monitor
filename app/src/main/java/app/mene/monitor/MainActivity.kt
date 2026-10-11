@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val themeMode by container.updateSettingsUseCase.observeThemeMode().collectAsStateWithLifecycle(
-                initialValue = AppThemeMode.SYSTEM
+                initialValue = AppThemeMode.LIGHT
             )
 
             MeneMonitorTheme(themeMode = themeMode) {

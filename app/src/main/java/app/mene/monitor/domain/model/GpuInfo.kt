@@ -10,5 +10,6 @@ data class GpuInfo(
     val driverVersion: String,
     val apiVersion: String,
     val busInfo: String,
+    val hasUsageReading: Boolean = true,
     val usageHistory: List<Float>
 )

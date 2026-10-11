@@ -188,6 +188,8 @@ class FakeDeviceRepository : DeviceRepository {
 
     override fun getDiagnosticItems(): List<DiagnosticItem> = diagnosticItemsToReturn
 
+    var diagnosticResultStatus: TestStatus = TestStatus.PASSED
+
     override suspend fun runDiagnosticTest(id: String): DiagnosticItem {
         val item = diagnosticItemsToReturn.firstOrNull { it.id == id } ?: DiagnosticItem(
             id = id,
@@ -196,7 +198,7 @@ class FakeDeviceRepository : DeviceRepository {
             category = app.mene.monitor.domain.model.DiagnosticCategory.AUTOMATED,
             status = TestStatus.PASSED
         )
-        return item.copy(status = TestStatus.PASSED)
+        return item.copy(status = diagnosticResultStatus)
     }
 
     override fun toggleFlashlight(enable: Boolean?): Boolean = true

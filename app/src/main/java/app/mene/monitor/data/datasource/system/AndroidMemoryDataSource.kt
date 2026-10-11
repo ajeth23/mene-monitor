@@ -2,7 +2,6 @@ package app.mene.monitor.data.datasource.system
 
 import android.app.ActivityManager
 import android.content.Context
-import android.os.Build
 import app.mene.monitor.domain.model.MemoryInfo
 import java.io.BufferedReader
 import java.io.FileReader
@@ -11,45 +10,41 @@ import kotlin.math.roundToInt
 class AndroidMemoryDataSource(
     private val context: Context
 ) {
-    private val usageHistory = ArrayDeque<Float>(List(20) { 45f })
+    private val usageHistory = ArrayDeque<Float>()
+    private val usageTimestamps = ArrayDeque<Long>()
 
     fun getMemoryInfo(): MemoryInfo {
         val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val memoryInfo = ActivityManager.MemoryInfo()
         activityManager?.getMemoryInfo(memoryInfo)
 
-        val total = memoryInfo.totalMem.coerceAtLeast(1024 * 1024 * 1024)
-        val available = memoryInfo.availMem
+        val total = memoryInfo.totalMem.coerceAtLeast(0)
+        val available = memoryInfo.availMem.coerceIn(0, total)
         val used = (total - available).coerceAtLeast(0)
-        val percentage = ((used.toDouble() / total.toDouble()) * 100.0).roundToInt().coerceIn(1, 100)
+        val precisePercentage = if (total > 0) (used.toDouble() / total * 100).toFloat() else null
+        val percentage = precisePercentage?.roundToInt() ?: 0
 
         val swapInfo = readSwapInfo()
 
         synchronized(usageHistory) {
-            if (usageHistory.size >= 25) usageHistory.removeFirst()
-            usageHistory.addLast(percentage.toFloat())
+            if (precisePercentage != null) {
+                if (usageHistory.size >= 60) { usageHistory.removeFirst(); usageTimestamps.removeFirst() }
+                usageHistory.addLast(precisePercentage)
+                usageTimestamps.addLast(android.os.SystemClock.elapsedRealtime())
+            }
         }
-
-        val memType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            "LPDDR5X"
-        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            "LPDDR5"
-        } else {
-            "LPDDR4X"
-        }
-
-        val memSpeed = if (memType == "LPDDR5X") "4266 MHz" else if (memType == "LPDDR5") "3200 MHz" else "2133 MHz"
 
         return MemoryInfo(
             totalBytes = total,
             usedBytes = used,
             availableBytes = available,
             usagePercentage = percentage,
-            memoryType = memType,
-            memorySpeed = memSpeed,
+            memoryType = "Unavailable",
+            memorySpeed = "Unavailable",
             swapTotalBytes = swapInfo.first,
             swapUsedBytes = (swapInfo.first - swapInfo.second).coerceAtLeast(0),
             isLowMemory = memoryInfo.lowMemory,
+            usageTimestamps = synchronized(usageHistory) { usageTimestamps.toList() },
             usageHistory = synchronized(usageHistory) { usageHistory.toList() }
         )
     }

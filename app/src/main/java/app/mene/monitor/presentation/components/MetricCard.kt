@@ -49,11 +49,12 @@ fun MetricCardWithSparkline(
     iconBgColor: Color,
     primaryValue: String,
     primaryLabel: String,
-    secondaryValue: String,
-    secondaryLabel: String,
+    secondaryValue: String = "",
+    secondaryLabel: String = "",
     sparklineData: List<Float>,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    readingUnavailable: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -115,36 +116,37 @@ fun MetricCardWithSparkline(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(
+        Column(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Column {
                 Text(
                     text = displayPrimaryValue,
                     color = TextPrimary,
-                    fontSize = 18.sp,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
                     text = primaryLabel,
                     color = TextMuted,
-                    fontSize = 11.sp
+                    fontSize = 14.sp
                 )
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = secondaryValue,
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = secondaryLabel,
-                    color = TextMuted,
-                    fontSize = 11.sp
-                )
+            if (secondaryValue.isNotBlank()) {
+                Column {
+                    Text(
+                        text = secondaryValue,
+                        color = TextPrimary,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = secondaryLabel,
+                        color = TextMuted,
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
 
@@ -334,7 +336,7 @@ fun MetricCardSummary(
             Text(
                 text = title,
                 color = TextSecondary,
-                fontSize = 12.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -344,7 +346,7 @@ fun MetricCardSummary(
         Text(
             text = displayMainText,
             color = TextPrimary,
-            fontSize = 18.sp,
+            fontSize = 28.sp,
             fontWeight = FontWeight.Bold
         )
 
@@ -353,7 +355,7 @@ fun MetricCardSummary(
         Text(
             text = subText,
             color = TextMuted,
-            fontSize = 11.sp
+            fontSize = 14.sp
         )
     }
 }

@@ -2,6 +2,8 @@ package app.mene.monitor.presentation.navigation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -68,10 +70,21 @@ fun MeneAppScaffold() {
         Screen.Diagnostics.route,
         Screen.More.route
     )
-    val shouldShowBottomBar = currentRoute in mainRoutes
+    val diagnosticsViewModel: DiagnosticsViewModel = viewModel(
+        key = "diagnostics",
+        factory = DiagnosticsViewModel.provideFactory(
+            container.getDiagnosticItemsUseCase,
+            container.runDiagnosticTestUseCase
+        )
+    )
+    val diagnosticsState by diagnosticsViewModel.uiState.collectAsStateWithLifecycle()
+    val isFullScreenTest = currentRoute == Screen.Diagnostics.route &&
+        diagnosticsState.activeInteractiveTest in setOf("display", "touchscreen", "sensors")
+    val shouldShowBottomBar = currentRoute in mainRoutes && !isFullScreenTest
 
     Scaffold(
         containerColor = DarkBackground,
+        contentWindowInsets = if (isFullScreenTest) WindowInsets(0, 0, 0, 0) else androidx.compose.material3.ScaffoldDefaults.contentWindowInsets,
         bottomBar = {
             if (shouldShowBottomBar) {
                 MeneBottomNavBar(
@@ -89,12 +102,13 @@ fun MeneAppScaffold() {
             }
         }
     ) { innerPadding ->
+        val contentPadding = if (isFullScreenTest) PaddingValues() else innerPadding
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(DarkBackground)
-                .padding(innerPadding)
-                .consumeWindowInsets(innerPadding)
+                .padding(contentPadding)
+                .consumeWindowInsets(contentPadding)
         ) {
             NavHost(
                 navController = navController,
@@ -132,7 +146,10 @@ fun MeneAppScaffold() {
                 // 2. CPU SCREEN
                 composable(Screen.Cpu.route) {
                     val cpuViewModel: CpuViewModel = viewModel(
-                        factory = CpuViewModel.provideFactory(container.observeCpuInfoUseCase)
+                        factory = CpuViewModel.provideFactory(
+                            container.observeCpuInfoUseCase,
+                            container.observeBatteryInfoUseCase
+                        )
                     )
                     val uiState by cpuViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -145,7 +162,10 @@ fun MeneAppScaffold() {
                 // 3. GPU SCREEN
                 composable(Screen.Gpu.route) {
                     val gpuViewModel: GpuViewModel = viewModel(
-                        factory = GpuViewModel.provideFactory(container.observeGpuInfoUseCase)
+                        factory = GpuViewModel.provideFactory(
+                            container.observeGpuInfoUseCase,
+                            container.observeBatteryInfoUseCase
+                        )
                     )
                     val uiState by gpuViewModel.uiState.collectAsStateWithLifecycle()
 
@@ -171,16 +191,8 @@ fun MeneAppScaffold() {
 
                 // 5. DIAGNOSTICS SCREEN
                 composable(Screen.Diagnostics.route) {
-                    val diagnosticsViewModel: DiagnosticsViewModel = viewModel(
-                        factory = DiagnosticsViewModel.provideFactory(
-                            container.getDiagnosticItemsUseCase,
-                            container.runDiagnosticTestUseCase
-                        )
-                    )
-                    val uiState by diagnosticsViewModel.uiState.collectAsStateWithLifecycle()
-
                     DiagnosticsScreen(
-                        uiState = uiState,
+                        uiState = diagnosticsState,
                         onAction = { action -> diagnosticsViewModel.onAction(action) }
                     )
                 }

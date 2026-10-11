@@ -22,7 +22,9 @@ import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.DeveloperBoard
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.MoreHoriz
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -30,7 +32,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -38,10 +42,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.mene.monitor.R
-import app.mene.monitor.presentation.theme.AccentPrimary
-import app.mene.monitor.presentation.theme.DarkBackground
-import app.mene.monitor.presentation.theme.DarkSurfaceVariant
 import app.mene.monitor.presentation.theme.TextMuted
+import app.mene.monitor.presentation.theme.TextSecondary
+
+private val BrandIconCyan = Color(0xFF01F8EF)
 
 data class BottomNavItem(
     val screen: Screen,
@@ -65,12 +69,22 @@ fun MeneBottomNavBar(
     onNavigate: (Screen) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
+    val navBarBg = if (isDark) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.surfaceContainer
+    val dividerColor = if (isDark) Color(0xFF182236) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f)
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(DarkBackground)
+            .background(navBarBg)
             .navigationBarsPadding()
     ) {
+        HorizontalDivider(
+            color = dividerColor,
+            thickness = 0.5.dp,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -81,7 +95,9 @@ fun MeneBottomNavBar(
         ) {
             bottomNavItems.forEach { item ->
                 val selected = currentRoute == item.screen.route
-                val contentColor = if (selected) AccentPrimary else TextMuted
+                val selectedColor = if (isDark) BrandIconCyan else Color(0xFF007E86)
+                val unselectedColor = if (isDark) TextMuted else TextSecondary
+                val contentColor = if (selected) selectedColor else unselectedColor
 
                 val interactionSource = remember { MutableInteractionSource() }
                 val isPressed by interactionSource.collectIsPressedAsState()
@@ -107,6 +123,13 @@ fun MeneBottomNavBar(
                     label = "tab_pill_alpha_${item.title}"
                 )
 
+                // Active indicator pill uses exact brand icon color #01F8EF
+                val pillBackground = if (isDark) {
+                    BrandIconCyan.copy(alpha = 0.20f * pillAlpha)
+                } else {
+                    BrandIconCyan.copy(alpha = 0.28f * pillAlpha)
+                }
+
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -123,7 +146,7 @@ fun MeneBottomNavBar(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(DarkSurfaceVariant.copy(alpha = DarkSurfaceVariant.alpha * pillAlpha))
+                            .background(pillBackground)
                             .padding(horizontal = 14.dp, vertical = 4.dp),
                         contentAlignment = Alignment.Center
                     ) {
